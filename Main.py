@@ -372,7 +372,6 @@ test_target_textured=[test_prediction_suit_target,test_prediction_tshirt_target,
 
 epochs=opt.epochs
 
-####Hello#####
 #############AutoEncoder Training##############
 
 if __name__ == '__main__':
