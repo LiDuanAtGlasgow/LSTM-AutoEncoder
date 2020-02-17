@@ -3,7 +3,7 @@ from openpyxl import load_workbook
 from matplotlib import pyplot as plt
 import pandas as pd
 
-filename='C:/Users/Li_Duan/Desktop/AE_P1_Second/Tool/Tool_Statistics/Statistics_Table.xlsx'
+filename='C:/Users/Li_Duan/Desktop/LSTM-AutoEncoder/Tool/Tool_Statistics/Statistics_Table.xlsx'
 save_figure='./data/comparison/'
 if not os.path.exists(save_figure):
     os.makedirs(save_figure)
@@ -36,11 +36,9 @@ df=pd.DataFrame({'x':X,'SDA_Depth_Train':SDA_Depth_Train,'SDA_Depth_Test':SDA_De
 
 ax.plot('x','SDA_Depth_Train',data=df,color='red',label='SDA_Depth_Train')
 ax.plot('x','SDA_Depth_Test',data=df,color='blue',label='SDA_Depth_Test', linestyle='dashed')
-ax.plot('x','AE_RGB_Train',data=df,color='yellow',label='AE_RGB_Train')
-ax.plot('x','AE_RGB_Test',data=df,color='green',label='AE_RGB_Test', linestyle='dashed')
 ax.set_xlabel('Epoch(s)')
 ax.set_ylabel('MSE Loss')
-plt.title('AE(RGB Image)')
+plt.title('SDA (Simulated Depth Image)')
 plt.grid(True)
 plt.legend(loc='upper right')
 plt.tight_layout()

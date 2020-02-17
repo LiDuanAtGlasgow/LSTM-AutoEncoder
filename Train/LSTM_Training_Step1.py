@@ -1,24 +1,17 @@
 import torch
-import torch.random as random_torch
 import random
-import statistics as statistics
 from statistics import mean as mean_stat
-from statistics import stdev as stdev
 import os
 import torch.nn as nn
 import torch.optim as optim
-from torchvision.transforms import transforms as transforms
 from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 import time
-from Model import LSTM
-import numpy as np
 import pandas as pd
 from Tool import SelfNoise
 from torch.autograd import Variable
-from Model import Classifier
 from sklearn.preprocessing import LabelBinarizer
-import csv
+from Tool import pytorch_ssim as ssim_loss
 
 
 
@@ -47,6 +40,7 @@ def train(models,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_T
     save_figure_lstm='./data/figure/'
     if not os.path.exists(save_figure_lstm):
         os.makedirs(save_figure_lstm)
+    ssim=ssim_loss.SSIM()
     
     """
     Data Preperation Period
@@ -103,9 +97,10 @@ def train(models,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_T
                 inputs_lstm=models(inputs_encor,device)
                 inputs_out=inputs_lstm.view(-1,64,32,32)
                 inputs_decor=net.decoder(inputs_out)
-                loss_function=loss_fn_step1(target,inputs_decor)
+                loss_function=-ssim(target,inputs_decor)
                 loss_function.backward()
-                total_loss.append(loss_function.item())
+                ssim_value=-loss_function.data[0]
+                total_loss.append(ssim_value)
                 optimiser_step1.step()
                 if ((i+1)%(len(inputs)-4*sequ_length)==1)and((z+1)%(item_time+1)==1):
                     print("[Epochs:%d/%d][Train Time:%d/%d][Duration:%f][Train Loss:%d]"
@@ -132,8 +127,9 @@ def train(models,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_T
                 inputs_lstm=models(inputs_encor,device)
                 inputs_out=inputs_lstm.view(-1,64,32,32)
                 inputs_decor=net.decoder(inputs_out)
-                loss_comparison=loss_fn_step1(target,inputs_decor)
-                total_loss.append(loss_comparison.item())
+                ssim_out=-ssim(target,inputs_decor)
+                ssim_value=-ssim_out.data[0]
+                total_loss.append(ssim_value)
                 if((i+1)%(len(inputs)-4*sequ_length)==1) and ((z+1)%(item_time+1)==1):
                     print("[Epochs:%d/%d][Test Time:%d/%d][Duration:%f][Test Loss:%d]"
                         %(n+1,epochs,t+1,len(inputs_randperm_test),time.time()-train_start_time,mean_stat(total_loss)))

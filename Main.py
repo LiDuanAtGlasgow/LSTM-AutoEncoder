@@ -378,45 +378,51 @@ if __name__ == '__main__':
     print("We have our Marvel Initiatives Started")
     epoch=22
     epochs=10
-    #Normalization.Normalization(cloth_lstm_loader_c)
-    #clean_net=torch.load(path_clean)
-    #noise_net=torch.load(path_noise)
-    #second_clean=torch.load(path_second)
-    #clean_net=Discriminator_and_Generator_Training_clean.train(net_opt,cloth_loader,cloth_test_loader,opt.batch_size,epoch ,opt.lr,device,opt.AutoEncoder_Type)
-    #torch.save(clean_net,path_clean)
-    #noise_net=Discriminator_and_Generator_Training_noise.train(net_opt,cloth_loader,cloth_test_loader,opt.batch_size,epoch ,opt.lr,device,opt.AutoEncoder_Type)
-    #torch.save(noise_net,path_noise)
-    #second_clean=Discriminator_and_Generator_second_clean.train(noise_net,clean_net,net_sec,cloth_loader,cloth_test_loader,opt.batch_size,epoch ,opt.lr,device,opt.AutoEncoder_Type)
-    #torch.save(second_clean,path_second)
-    #net=Discriminator_and_Generator_Training.train(net_opt,cloth_loader,cloth_test_loader,opt.batch_size,epochs,opt.lr,device,opt.AutoEncoder_Type)
-    #torch.save(net,path)
+    """
+    clean_net=torch.load(path_clean)
+    noise_net=torch.load(path_noise)
+    second_clean=torch.load(path_second)
+    clean_net=Discriminator_and_Generator_Training_clean.train(net_opt,cloth_loader,cloth_test_loader,opt.batch_size,epoch ,opt.lr,device,opt.AutoEncoder_Type)
+    torch.save(clean_net,path_clean)
+    noise_net=Discriminator_and_Generator_Training_noise.train(net_opt,cloth_loader,cloth_test_loader,opt.batch_size,epoch ,opt.lr,device,opt.AutoEncoder_Type)
+    torch.save(noise_net,path_noise)
+    second_clean=Discriminator_and_Generator_second_clean.train(noise_net,clean_net,net_sec,cloth_loader,cloth_test_loader,opt.batch_size,epoch ,opt.lr,device,opt.AutoEncoder_Type)
+    torch.save(second_clean,path_second)
+    """
+    """
+    net=Discriminator_and_Generator_Training.train(net_opt,cloth_loader,cloth_test_loader,opt.batch_size,epochs,opt.lr,device,opt.AutoEncoder_Type)
+    torch.save(net,path)
+    """
 #############LSTM Training#######################
     net=torch.load(path)
-    #for n in range(len(clean_net)):
-    #    frozon_and_free_Get.frozon_Param(clean_net[n])
-    #for n in range(len(noise_net)):
-    #    frozon_and_free_Get.frozon_Param(noise_net[n])
-    #for n in range(len(second_clean)):
-    #    frozon_and_free_Get.frozon_Param(second_clean[n])
+    """
+    for n in range(len(clean_net)):
+        frozon_and_free_Get.frozon_Param(clean_net[n])
+    for n in range(len(noise_net)):
+        frozon_and_free_Get.frozon_Param(noise_net[n])
+    for n in range(len(second_clean)):
+        frozon_and_free_Get.frozon_Param(second_clean[n])
+    """
     for n in range(len(net)):
         frozon_and_free_Get.frozon_Param(net[n])
-    #model_one=LSTM_Training_Step1.train(model,epoch,cloth_lstm_train_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
-    #model_one=LSTM_Training_No_Label_Step1.train(model,epoch,cloth_lstm_train_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
-    #torch.save(model_one,lstm_path)
+    model_one=LSTM_Training_Step1.train(model,epoch,cloth_lstm_train_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
+    """
+    model_one=LSTM_Training_No_Label_Step1.train(model,epoch,cloth_lstm_train_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
+    torch.save(model_one,lstm_path)
     models=torch.load(step1_path)
     frozon_and_free_Get.frozon_Param(models)
     model=LSTM_Training_Label_Step.train(models,epochs,cloth_lstm_loader_c,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_step1_c,classifier)
-    #Classifier_Training=Classifier_Training.train(model,epochs,cloth_lstm_loader_classifier,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_classifier,classifier)
-    #classifier_trained=torch.load(path_classifier)
-    #frozon_and_free_Get.free_Param(classifier)
-    #model_LSTM=LSTM_Training_Step1_classifier.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_step1_c,classifier)
-    #model_one_classifier=Classifier_Training.train(model,epoch,cloth_lstm_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_step1_c,classifier)
-    #model_one_classifier_clean=LSTM_Training_Step1_clean.train(models,epochs,cloth_lstm_loader_c,noise_net,second_clean,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_step1_c,classifier)
-    #model_one=torch.load(path_step1)
-    #model_one_classifier=torch.load(path_step1_c)
-    #frozon_and_free_Get.frozon_Param(model_one)
-    #frozon_and_free_Get.free_Param(model_one_classifier)
-    #Test_for_the_Next_Two_Frames.train(model_one,test_original_textured,net,device,opt.AutoEncoder_Type)
+    Classifier_Training=Classifier_Training.train(model,epochs,cloth_lstm_loader_classifier,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_classifier,classifier)
+    classifier_trained=torch.load(path_classifier)
+    frozon_and_free_Get.free_Param(classifier)
+    model_LSTM=LSTM_Training_Step1_classifier.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_step1_c,classifier)
+    model_one_classifier=Classifier_Training.train(model,epoch,cloth_lstm_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_step1_c,classifier)
+    model_one_classifier_clean=LSTM_Training_Step1_clean.train(models,epochs,cloth_lstm_loader_c,noise_net,second_clean,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_step1_c,classifier)
+    model_one=torch.load(path_step1)
+    model_one_classifier=torch.load(path_step1_c)
+    frozon_and_free_Get.frozon_Param(model_one)
+    frozon_and_free_Get.free_Param(model_one_classifier)
+    Test_for_the_Next_Two_Frames.train(model_one,test_original_textured,net,device,opt.AutoEncoder_Type)
 ###########Thank you, Marvel ####################
 ###########I love you three thousand ############
 ###########Viva Marvel ##########################
