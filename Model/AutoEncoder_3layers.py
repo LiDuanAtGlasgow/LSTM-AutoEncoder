@@ -18,8 +18,6 @@ class AutoEncoder(nn.Module):
 
         self.tanh = nn.Tanh()
         self.elu = nn.ELU()
-        #self.bn1=nn.BatchNorm2d(32)
-        #self.bn2=nn.BatchNorm2d(64)
     
     def encoder(self, x):
         out = self.elu(self.conv1(x))

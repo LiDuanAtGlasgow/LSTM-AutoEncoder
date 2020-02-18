@@ -376,7 +376,7 @@ epochs=opt.epochs
 
 if __name__ == '__main__':
     print("We have our Marvel Initiatives Started")
-    epoch=22
+    epoch=36
     epochs=10
     """
     clean_net=torch.load(path_clean)
@@ -405,7 +405,8 @@ if __name__ == '__main__':
     """
     for n in range(len(net)):
         frozon_and_free_Get.frozon_Param(net[n])
-    model_one=LSTM_Training_Step1.train(model,epoch,cloth_lstm_train_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
+    
+    model_one=LSTM_Training_Step1.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
     """
     model_one=LSTM_Training_No_Label_Step1.train(model,epoch,cloth_lstm_train_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
     torch.save(model_one,lstm_path)
@@ -426,3 +427,4 @@ if __name__ == '__main__':
 ###########Thank you, Marvel ####################
 ###########I love you three thousand ############
 ###########Viva Marvel ##########################
+"""

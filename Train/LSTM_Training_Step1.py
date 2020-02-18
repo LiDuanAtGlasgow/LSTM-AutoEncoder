@@ -19,8 +19,6 @@ from Tool import pytorch_ssim as ssim_loss
 #####Tarin Model(LSTM)########
 ##############################
 def train(models,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_Type):
-    average_train_loss_set=0.00
-    average_test_loss_set=0.00
     selfnoise=SelfNoise.Gaussian_Nosie()
     train_start_time=time.time()
     save_image_lstm='./data/lstm_result/'
@@ -30,17 +28,19 @@ def train(models,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_T
     if not os.path.exists(save_model_path):
        os.makedirs(save_model_path)
     path_step1='./save_model/model_step1.pth'
-    loss_fn_step1 = torch.nn.MSELoss(size_average=False)
     optimiser_step1 = torch.optim.Adam(models.parameters(), lr=lr)
-    lossstatistics=[]
-    training_epoch=[]
-    lossstatistics_train=[]
+    mse_train=[]
+    mse_test=[]
+    epoch=[]
+    ssim_train=[]
+    ssim_test=[]
     epochs=int(epochs)
     net=net[0]
     save_figure_lstm='./data/figure/'
     if not os.path.exists(save_figure_lstm):
         os.makedirs(save_figure_lstm)
     ssim=ssim_loss.SSIM()
+    mse=nn.MSELoss(reduction='sum')
     
     """
     Data Preperation Period
@@ -78,7 +78,8 @@ def train(models,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_T
     inputs_randperm_test=inputs_random[int(len(inputs_random)*0.80):int(len(inputs_random))]
     
     for n in range(epochs):
-        total_loss=[]
+        ssim_stat=[]
+        mse_stat=[]
         for z in range(len(inputs_randperm)):
             sample=inputs_randperm[z]
             inputs=sample['picture']
@@ -97,19 +98,25 @@ def train(models,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_T
                 inputs_lstm=models(inputs_encor,device)
                 inputs_out=inputs_lstm.view(-1,64,32,32)
                 inputs_decor=net.decoder(inputs_out)
-                loss_function=-ssim(target,inputs_decor)
-                loss_function.backward()
-                ssim_value=-loss_function.data[0]
-                total_loss.append(ssim_value)
+                ssim_optim=-ssim(target,inputs_decor)
+                mse_optim=mse(target,inputs_decor)
+                mse_optim.backward()
+                ssim_value=-ssim_optim.item()
+                mse_value=mse_optim.item()
+                ssim_stat.append(ssim_value)
+                mse_stat.append(mse_value)
                 optimiser_step1.step()
                 if ((i+1)%(len(inputs)-4*sequ_length)==1)and((z+1)%(item_time+1)==1):
-                    print("[Epochs:%d/%d][Train Time:%d/%d][Duration:%f][Train Loss:%d]"
-                        %(n+1,epochs,z+1,len(inputs_randperm),time.time()-train_start_time,mean_stat(total_loss)))
+                    print("[Epochs:%d/%d][Train Time:%d/%d][Duration:%f][SSIM:%f][MSE:%f]"
+                        %(n+1,epochs,z+1,len(inputs_randperm),time.time()-train_start_time,mean_stat(ssim_stat),mean_stat(mse_stat)))
                     train_start_time=time.time()
-        average_train_loss_set=mean_stat(total_loss)  
-        lossstatistics_train.append(average_train_loss_set)
-        
-        total_loss=[]
+        ssim_average_train=mean_stat(ssim_stat)  
+        ssim_train.append(ssim_average_train)
+        mse_average_train=mean_stat(mse_stat)
+        mse_train.append(mse_average_train)
+
+        ssim_stat=[]
+        mse_stat=[]
         for z in range (len(inputs_randperm_test)):
             sample=inputs_randperm_test[z]
             inputs=sample['picture']
@@ -128,36 +135,49 @@ def train(models,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_T
                 inputs_out=inputs_lstm.view(-1,64,32,32)
                 inputs_decor=net.decoder(inputs_out)
                 ssim_out=-ssim(target,inputs_decor)
-                ssim_value=-ssim_out.data[0]
-                total_loss.append(ssim_value)
+                ssim_value=-ssim_out.item()
+                ssim_stat.append(ssim_value)
+                mse_out=mse(target,inputs_decor)
+                mse_value=mse_out.item()
+                mse_stat.append(mse_value)
                 if((i+1)%(len(inputs)-4*sequ_length)==1) and ((z+1)%(item_time+1)==1):
-                    print("[Epochs:%d/%d][Test Time:%d/%d][Duration:%f][Test Loss:%d]"
-                        %(n+1,epochs,t+1,len(inputs_randperm_test),time.time()-train_start_time,mean_stat(total_loss)))
+                    print("[Epochs:%d/%d][Test Time:%d/%d][Duration:%f][SSIM:%f][MSE:%d]"
+                        %(n+1,epochs,z+1,len(inputs_randperm_test),time.time()-train_start_time,mean_stat(ssim_stat),mean_stat(mse_stat)))
                     train_start_time=time.time()
                 cat=torch.cat([input_pred,target,inputs_decor])
                 save_image(cat.cpu(),os.path.join(save_image_lstm,"%d_%d.png"%(time.time(),i)))
-        average_test_loss_set=mean_stat(total_loss)
-        lossstatistics.append(average_test_loss_set)
-        training_epoch.append(n)
+        ssim_average_test=mean_stat(ssim_stat)
+        ssim_test.append(ssim_average_test)
+        mse_average_test=mean_stat(mse_stat)
+        mse_test.append(mse_average_test)
+        epoch.append(n)
     if AutoEncoder_Type==1:
         AutoEncoder_Type_Name='Depth Image'
     if AutoEncoder_Type==2:
         AutoEncoder_Type_Name='RGB Image'
-    df=pd.DataFrame({'x':training_epoch,'train':lossstatistics_train,'test':lossstatistics})
+    df=pd.DataFrame({'x':epoch,'train_ssim':ssim_train,'test_ssim':ssim_test,'train_mse':mse_train,'test_mse':mse_test})
     asplot=plt.figure()
     asplot.add_subplot(111)
-    plt.plot('x','train', data=df,color='red',label='train')
-    plt.plot('x','test', data=df,color='blue',label='test',linestyle='dashed')
-    plt.xlabel('Epoch')
-    plt.ylabel('LSTM Loss')
-    plt.title('Loss Function for LSTM of '+AutoEncoder_Type_Name)
-    plt.grid(True)
+    sbplt1=plt.subplot()
+    sbplt1.plot('x','train_ssim', data=df,color='red',label='train_ssim')
+    sbplt1.plot('x','test_ssim', data=df,color='blue',label='test_ssim',linestyle='dashed')
+    sbplt1.set_xlabel('Epoch')
+    sbplt1.set_ylabel('SSIM Loss')
+    plt.legend(loc='upper left')
+    sbplt2=sbplt1.twinx()
+    sbplt2.plot('x','train_mse', data=df,color='green',label='train_mse')
+    sbplt2.plot('x','test_mse', data=df,color='yellow',label='test_mse',linestyle='dashed')
+    sbplt2.set_ylabel('MSE Loss')
     plt.legend(loc='upper right')
+    plt.title('Loss for LSTM of '+AutoEncoder_Type_Name)
+    plt.grid(True)
     plt.savefig(os.path.join(save_figure_lstm,'LossFunction_Textured_%d_%f.png'%(AutoEncoder_Type,time.time())),dip=100)
     torch.save(models,path_step1)
-    print ('train loss is:',lossstatistics_train)
-    print ('test loss is:',lossstatistics)
-    print ('The Training is finished!')
+    print ('ssim train loss is:',ssim_train)
+    print ('ssim test loss is:',ssim_test)
+    print ('mse train loss is:',mse_train)
+    print ('mse test loss is:',mse_test)
+    print ('Contragts! Finished! :)')
     return models
 
 
