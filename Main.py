@@ -405,8 +405,9 @@ if __name__ == '__main__':
     """
     for n in range(len(net)):
         frozon_and_free_Get.frozon_Param(net[n])
-    
+    """
     model_one=LSTM_Training_Step1.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
+    """
     """
     model_one=LSTM_Training_No_Label_Step1.train(model,epoch,cloth_lstm_train_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
     torch.save(model_one,lstm_path)
@@ -419,12 +420,16 @@ if __name__ == '__main__':
     model_LSTM=LSTM_Training_Step1_classifier.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_step1_c,classifier)
     model_one_classifier=Classifier_Training.train(model,epoch,cloth_lstm_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_step1_c,classifier)
     model_one_classifier_clean=LSTM_Training_Step1_clean.train(models,epochs,cloth_lstm_loader_c,noise_net,second_clean,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type,opt.index_column,path_step1_c,classifier)
+    """
     model_one=torch.load(path_step1)
+    """
     model_one_classifier=torch.load(path_step1_c)
+    """
     frozon_and_free_Get.frozon_Param(model_one)
+    """
     frozon_and_free_Get.free_Param(model_one_classifier)
+    """
     Test_for_the_Next_Two_Frames.train(model_one,test_original_textured,net,device,opt.AutoEncoder_Type)
 ###########Thank you, Marvel ####################
 ###########I love you three thousand ############
 ###########Viva Marvel ##########################
-"""

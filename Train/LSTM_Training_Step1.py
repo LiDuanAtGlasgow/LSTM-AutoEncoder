@@ -27,7 +27,7 @@ def train(models,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_T
     save_model_path='./save_model/'
     if not os.path.exists(save_model_path):
        os.makedirs(save_model_path)
-    path_step1='./save_model/model_step1.pth'
+    path_step1='./save_model/model_%f_step1.pth'%(time.time())
     optimiser_step1 = torch.optim.Adam(models.parameters(), lr=lr)
     mse_train=[]
     mse_test=[]
@@ -144,8 +144,8 @@ def train(models,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_T
                     print("[Epochs:%d/%d][Test Time:%d/%d][Duration:%f][SSIM:%f][MSE:%d]"
                         %(n+1,epochs,z+1,len(inputs_randperm_test),time.time()-train_start_time,mean_stat(ssim_stat),mean_stat(mse_stat)))
                     train_start_time=time.time()
-                cat=torch.cat([input_pred,target,inputs_decor])
-                save_image(cat.cpu(),os.path.join(save_image_lstm,"%d_%d.png"%(time.time(),i)))
+                    cat=torch.cat([input_pred,target,inputs_decor])
+                    save_image(cat.cpu(),os.path.join(save_image_lstm,"%d_%d.png"%(time.time(),i)))
         ssim_average_test=mean_stat(ssim_stat)
         ssim_test.append(ssim_average_test)
         mse_average_test=mean_stat(mse_stat)
