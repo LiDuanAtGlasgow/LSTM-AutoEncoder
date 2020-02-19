@@ -1,4 +1,6 @@
 /Database
 .vscode
-/data
+/data/Recon_Image
+/data/Window_Sliding
+/data/lstm_result/
 __pycache__
