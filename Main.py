@@ -29,7 +29,7 @@ from Train import classification
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", type=int, default=20, help="size of the batches")
-parser.add_argument("--batch_size_for_prediction",type=int,default=100,help='Bacth Szie for the first test')
+parser.add_argument("--batch_size_for_prediction",type=int,default=20,help='Bacth Szie for the first test')
 parser.add_argument("--lr", type=float, default=1e-3, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
@@ -40,6 +40,7 @@ parser.add_argument("--train_method",type=int,default=1,help='train method')
 parser.add_argument("--extractor",type=int,default=1,help='extractor type')
 parser.add_argument("--step1_type",type=int,default=1,help='step1 type of model_step1')
 parser.add_argument("--real_image",type=int,default=1,help='check if it is the real image')
+parser.add_argument("--dataset_type",type=int,default=1,help='the train indice of the dataset')
 
 opt=parser.parse_args()
 ####################Loading Process#############
@@ -112,10 +113,15 @@ if opt.real_image==2:
     if opt.step1_type==2:
         step1_path='./save_model/model_RGB_autoencoder_step1_real.pth'
 
+save_classification='./data/classification/'
+if not os.path.exists(save_classification):
+    os.makedirs(save_classification)
+
+
 seed=42
 np.random.seed(seed)
 torch.manual_seed(seed)
-data_size=len(cloth_dataset)
+data_size=len(cloth_dataset_c)
 n_test=int(data_size*0.1)
 n_train=data_size-n_test
 random_seed=42
@@ -192,7 +198,7 @@ if __name__ == '__main__':
     """
     model=LSTM_Training_Step1.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
     """
-    model=torch.load(path_step1)
+    model=torch.load(step1_path)
     frozon_and_free_Get.frozon_Param(model)
     Classifier=classification.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,device,opt.AutoEncoder_Type,Classifier)
     """
