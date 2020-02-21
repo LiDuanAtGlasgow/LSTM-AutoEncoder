@@ -12,28 +12,31 @@ from Tool import SelfNoise
 from torch.autograd import Variable
 from sklearn.preprocessing import LabelBinarizer
 
-def train(model,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_Type):
+def train(model,epochs,data_loader,net,lr,device,AutoEncoder_Type,Classifier):
     selfnoise=SelfNoise.Gaussian_Nosie()
     train_start_time=time.time()
     epoch=[]
     net=net[0]
-    
+    optimizer_Classifier=optim.Adam(Classifier.parameters(),lr=lr)
+    save_figure='./data/classification_result'
+    if not os.path.exists(save_figure):
+        os.mkdir(save_figure)
     """
     Data Preperation Period
     """
     inputs_random=[]
     start_time=time.time()
     
-    for t,input_ in enumerate(mario_lstm_loader):
+    for t,input_ in enumerate(data_loader):
         if AutoEncoder_Type==1:
             image=input_['Image'][:,0:1,:,:]
         if AutoEncoder_Type==2:
             image=input_['Image']
         label=input_['Label']
-        item_time=int(len(mario_lstm_loader)/10)
+        item_time=int(len(data_loader)/10)
         if (t+1)%(item_time+1)==1:
             print("Batch_Size[%d/%d]Duration[%f]"
-                %(t+1,len(mario_lstm_loader),time.time()-start_time))
+                %(t+1,len(data_loader),time.time()-start_time))
             start_time=time.time()
         samples={"picture":image,"label":label}
         inputs_random.append(samples)
@@ -55,9 +58,16 @@ def train(model,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_Ty
     inputs_randperm_val=inputs_random[int(len(inputs_random)*0.80):int(len(inputs_random)*0.90)]
     inputs_randperm_test=inputs_random[int(len(inputs_random)*0.90):int(len(inputs_random))]
     sequ_length=1
+
+    train_epoch=[]
+    acc_train=[]
+    test_epoch=[]
+    acc_test=[]
     
     for n in range(epochs):
 
+        train_acc=0
+        train_loss=[]
         random.shuffle(inputs_randperm_train)
         for z in range(len(inputs_randperm_train)):
             sample=inputs_randperm_train[z]
@@ -67,19 +77,41 @@ def train(model,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_Ty
             inputs=Variable(inputs)
             inputs_noise=inputs_noise.to(device)
             inputs_noise=Variable(inputs_noise)
+            label=sample["label"]
+            label=Variable(label)
+            label=label.to(device)
             item_time=int(len(inputs_randperm_train)/10)
+            batch_acc=0
+            number=len(inputs)-3*sequ_length
             for i in range(len(inputs)-3*sequ_length):
+                optimizer_Classifier.zero_grad()
                 input_pred=inputs_noise[i:i+3*sequ_length]
+                tagart_label=label[i+3*sequ_length]
                 inputs_encor=net.encoder(input_pred)
                 inputs_lstm=model(inputs_encor,device)
-                inputs_out=inputs_lstm.view(-1,64,32,32)
-                if ((i+1)%(len(inputs)-4*sequ_length)==1)and((z+1)%(item_time+1)==1):
-                    print("[Epochs:%d/%d][Train Time:%d/%d][Duration:%f]"
-                        %(n+1,epochs,z+1,len(inputs_randperm_train),time.time()-train_start_time))
+                pred_label=Classifier(inputs_lstm)
+                _,target_index=torch.max(tagart_label,1)
+                _,pred_index=torch.max(pred_label,1)
+                loss_fn=Classifier.loss_fn(pred_label,target_index)
+                loss_fn.backward()
+                train_loss.append(loss_fn.item())
+                optimizer_Classifier.step()
+                if pred_index==target_index:
+                    batch_acc+=1
+                    train_acc+=1
+                if ((i+1)%(len(inputs)-3*sequ_length)==1)and((z+1)%(item_time)==1):
+                    acc_rate=100*(batch_acc/number)
+                    print("[Epochs:%d/%d][Train Time:%d/%d][Duration:%f][Loss:%f][Accuaracy:%f]"
+                        %(n+1,epochs,z+1,len(inputs_randperm_train),time.time()-train_start_time,mean_stat(train_loss),acc_rate))
                     train_start_time=time.time()
-        
+        loss_mean=mean_stat(train_loss)
+        total_number=len(inputs_randperm_train)*(len(inputs)-3*sequ_length)
+        total_acc=100*(train_acc/total_number)
+        train_epoch.append(loss_mean)
+        acc_train.append(total_acc)
 
-        
+        test_loss=[]
+        test_acc=0
         random.shuffle(inputs_randperm_val)
         for z in range (len(inputs_randperm_val)):
             sample=inputs_randperm_val[z]
@@ -89,35 +121,59 @@ def train(model,epochs,mario_lstm_loader,net,lr,batch_size,device,AutoEncoder_Ty
             inputs=Variable(inputs)
             inputs_noise=inputs_noise.to(device)
             inputs_noise=Variable(inputs_noise)
+            label=sample["label"]
+            label=label.to(device)
             item_time=int(len(inputs_randperm_test)/10)
+            batch_acc=0
+            number=len(inputs)-3*sequ_length
             for i in range(len(inputs)-3*sequ_length):
                 input_pred=inputs_noise[i:i+3*sequ_length]
+                target_label=label[i+3*sequ_length]
                 inputs_encor=net.encoder(input_pred)
                 inputs_lstm=model(inputs_encor,device)
-                inputs_out=inputs_lstm.view(-1,64,32,32)
+                pred_label=Classifier(inputs_lstm)
+                _,target_index=torch.max(target_label,1)
+                _,pred_index=torch.max(pred_label,1)
+                loss_fn=Classifier.loss_fn(pred_label,target_index)
+                if pred_index==target_index:
+                    batch_acc+=1
+                    test_acc+=1
+                test_loss.append(loss_fn.item())
                 if((i+1)%(len(inputs)-4*sequ_length)==1) and ((z+1)%(item_time+1)==1):
-                    print("[Epochs:%d/%d][Test Time:%d/%d][Duration:%f]"
-                        %(n+1,epochs,z+1,len(inputs_randperm_val),time.time()-train_start_time,mean_stat(ssim_stat),mean_stat(mse_stat)))
+                    acc_rate=(batch_acc/number)*100
+                    print("[Epochs:%d/%d][Test Time:%d/%d][Duration:%f][Loss: %f][Accuracy: %f]"
+                        %(n+1,epochs,z+1,len(inputs_randperm_val),time.time()-train_start_time,mean_stat(test_loss),acc_rate))
                     train_start_time=time.time()
-
+        loss_mean=mean_stat(test_loss)
+        total_number=len(inputs_randperm_val)*(len(inputs)-3*sequ_length)
+        total_acc=100*(test_loss/total_number)
+        test_epoch.append(loss_mean)
+        acc_test.append(total_acc)
         epoch.append(n)
     if AutoEncoder_Type==1:
         AutoEncoder_Type_Name='Depth Image'
     if AutoEncoder_Type==2:
         AutoEncoder_Type_Name='RGB Image'
-    df=pd.DataFrame({'x':epoch})
+    df=pd.DataFrame({'x':epoch, 'train_loss':train_epoch, 'train_acc':acc_train,'test_loss':test_epoch,'test_acc':acc_test})
     asplot=plt.figure()
     asplot.add_subplot(111)
     sbplt1=plt.subplot()
-    sbplt1.plot('x', data=df,color='red',label='train_ssim')
-    sbplt1.plot('x', data=df,color='blue',label='test_ssim',linestyle='dashed')
+    sbplt1.plot('x', 'train_loss',data=df,color='red',label='train_loss')
+    sbplt1.plot('x', 'test_loss',data=df,color='blue',label='test_loss',linestyle='dashed')
     sbplt1.set_xlabel('Epoch')
     plt.legend(loc='upper left')
     sbplt2=sbplt1.twinx()
-    sbplt2.plot('x', data=df,color='green',label='train_mse')
-    sbplt2.plot('x', data=df,color='yellow',label='test_mse',linestyle='dashed')
+    sbplt2.plot('x', 'train_acc',data=df,color='green',label='train_acc')
+    sbplt2.plot('x', 'test_acc',data=df,color='yellow',label='test_acc',linestyle='dashed')
     plt.legend(loc='upper right')
     plt.grid(True)
-    
-
+    plt.title("Cross-Entropy Loss and Accuracy of "+AutoEncoder_Type_Name)
+    plt.savefig(os.path.join(save_figure,'%f.png'%(time.time())),dip=100)
+    print ("Train Loss is:", train_epoch)
+    print ("Train acc is:", acc_train)
+    print ("Test Loss is:",test_epoch)
+    print ("Test acc is:", acc_test)
+    plt.show()
+    print ("Train Ends!")
+    return Classifier
 

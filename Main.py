@@ -24,6 +24,7 @@ from Tool import Picture_Dataset as Picture_Dataset
 from Tool import Normalization
 from Train import LSTM_Training_No_Label_Step1 as LSTM_Training_No_Label_Step1
 from Train import AutEncoder_Train
+from Train import classification
 
 
 parser = argparse.ArgumentParser()
@@ -141,8 +142,8 @@ model=LSTM.LSTM(input_feature=1024,n_layer=1,hidden_dim=1024)
 model=model.to(device)
 net_RGB=AutoEncoder.AutoEncoder(device)
 net_depth=AutoEncoder_Depth.AutoEncoder(device)
-classifier=Classifier.Classifier(device,output_feature=opt.n_class,hidden_feature=128)
-classifier=classifier.to(device)
+Classifier=Classifier.Classifier(device,output_feature=opt.n_class,hidden_feature=128)
+Classifier=Classifier.to(device)
 
 if opt.extractor==1:
     net_opt=[net_depth]
@@ -189,9 +190,12 @@ if __name__ == '__main__':
     for n in range(len(net)):
         frozon_and_free_Get.frozon_Param(net[n])
     """
-    model_one=LSTM_Training_Step1.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
+    model=LSTM_Training_Step1.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
     """
-    model_one=torch.load(path_step1)
-    frozon_and_free_Get.frozon_Param(model_one)
+    model=torch.load(path_step1)
+    frozon_and_free_Get.frozon_Param(model)
+    Classifier=classification.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,device,opt.AutoEncoder_Type,Classifier)
+    """
     Window_Sliding_Test.train(model_one,[cloth_lstm_train_loader],net,device,opt.AutoEncoder_Type)
+    """
 ##################################################
