@@ -92,21 +92,25 @@ def train(net,data_loader,epochs,lr,device,AutoEncoder_Type,Classifier):
             optimiser_label.zero_grad()
             sample=inputs_randperm_train[z]
             inputs=sample["picture"]
-            label=sample["label"]
+            inputs_label=sample["label"]
             inputs_noise=selfnoise(inputs)
             inputs=inputs.to(device)
             inputs=Variable(inputs)
             inputs_noise=inputs_noise.to(device)
             inputs_noise=Variable(inputs_noise)
-            input_enc=net.encoder(inputs_noise)
-            pred_label=Classifier(input_enc)
-            loss_fn=Classifier.loss_fn(pred_label,label)
-            loss_fn.backward()
-            train_loss.append(loss_fn.item())
-            if (z+1)%batch_train==1:
-                print ("[Train Part][Epoch:%d/%d][Loss:%f][Duration:%f]"
-                %(n_epoch+1,epochs,mean_stat(train_loss),time.time()-start_time),"pred_label is:",pred_label)
-                start_time=time.time()
+            for i in range (len(inputs_noise)):
+                image=inputs_noise[i:i+1]
+                label=inputs_label[i]
+                image_enc=net.encoder(image)
+                pred_label=Classifier(image_enc)
+                _,label_index=torch.max(label,1)
+                loss_fn=Classifier.loss_fn(pred_label,label_index)
+                loss_fn.backward()
+                train_loss.append(loss_fn.item())
+                if (z+1)%batch_train==1 and (i+1)%(len(inputs_noise))==1:
+                    print ("[Train Part][Epoch:%d/%d][Loss:%f][Duration:%f]"
+                    %(n_epoch+1,epochs,mean_stat(train_loss),time.time()-start_time),"pred_label is:",pred_label)
+                    start_time=time.time()
         train_mean=mean_stat(train_loss)
         train_epoch.append(train_mean)
         print ("train_mean is:",train_mean)
@@ -117,20 +121,23 @@ def train(net,data_loader,epochs,lr,device,AutoEncoder_Type,Classifier):
         for z in range (len(inputs_randperm_val)):
             sample=inputs_randperm_val[z]
             inputs=sample['picture']
-            label=sample['label']
+            inputs_label=sample['label']
             inputs_noise=selfnoise(inputs)
             inputs_noise=inputs_noise.to(device)
             inputs_noise=Variable(inputs_noise)
-            input_enc=net.encoder(inputs_noise)
-            pred_label=Classifier(input_enc)
-            loss_fn=Classifier.loss_fn(pred_label,label)
-            val_loss.append(loss_fn.item())
-            if (z+1)%batch_val==1:
-                print ("[Test Part][Epoch:%d/%d][Loss is:%f][Duration:%f]"
-                %(n_epoch+1,epochs,mean_stat(val_loss),time.time()-start_time),"pred_lable is:",pred_label)
-                start_time=time.time()
-                n=min(len(inputs_noise),8)
-                save_image(inputs_noise[:n],os.path.join(save_pic,"%f.png"%time.time()))
+            for i in range(len(inputs_noise)):
+                image=inputs_noise[i:i+1]
+                label=inputs_label[i]
+                image_enc=net.encoder(image)
+                pred_label=Classifier(image_enc)
+                _,label_index=torch.max(label,1)
+                loss_fn=Classifier.loss_fn(pred_label,label_index)
+                val_loss.append(loss_fn.item())
+                if (z+1)%batch_val==1 and (i+1)%(len(inputs_noise))==1:
+                    print ("[Test Part][Epoch:%d/%d][Loss is:%f][Duration:%f]"
+                    %(n_epoch+1,epochs,mean_stat(val_loss),time.time()-start_time),"pred_lable is:",pred_label)
+                    start_time=time.time()
+                    save_image(image.cpu(),os.path.join(save_pic,"%f.png"%time.time()))
         val_mean=mean_stat(val_loss)
         val_epoch.append(val_mean)
         x_epoch.append(n_epoch)
@@ -139,12 +146,12 @@ def train(net,data_loader,epochs,lr,device,AutoEncoder_Type,Classifier):
         AutoEncoder_Type_Name='Depth Image'
     if AutoEncoder_Type==2:
         AutoEncoder_Type_Name='RGB Image'
-    df=pd.DataFrame({'x':x_epoch,'train':train_epoch,'val':val_epoch})
+    df=pd.DataFrame({'x':x_epoch,'train_loss':train_epoch,'val_loss':val_epoch})
     ax_t=plt.figure()
     ax_t.add_subplot(111)
     ax=plt.subplot()
-    ax.plt('x','train', data=df,color='purple',label='train_loss')
-    ax.plt('x','test', data=df,color='blue',linestyle='dashed',label='val_loss')
+    ax.plot('x','train_loss', data=df,color='purple',label='train_loss')
+    ax.plot('x','val_loss', data=df,color='blue',linestyle='dashed',label='val_loss')
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Entropy_loss')
     plt.title("Cross-Entropy and Accuarcy of "+AutoEncoder_Type_Name)

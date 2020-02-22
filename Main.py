@@ -25,7 +25,7 @@ from Tool import Normalization
 from Train import LSTM_Training_No_Label_Step1 as LSTM_Training_No_Label_Step1
 from Train import AutEncoder_Train
 from Train import classification
-from Train import classification_Random_Sequential
+from Train import classifiction_Random_NonSequential
 
 
 parser = argparse.ArgumentParser()
@@ -210,5 +210,5 @@ if __name__ == '__main__':
     """
     Window_Sliding_Test.train(model_one,[cloth_lstm_train_loader],net,device,opt.AutoEncoder_Type)
     """
-    Classifier_Randomc=classification_Random_Sequential.train(net,cloth_nonsequential_loader,epoch,opt.lr,device,opt.AutoEncoder_Type,Classifier)
+    Classifier_Randomc=classifiction_Random_NonSequential.train(net,cloth_nonsequential_loader,epoch,opt.lr,device,opt.AutoEncoder_Type,Classifier)
 ##################################################
