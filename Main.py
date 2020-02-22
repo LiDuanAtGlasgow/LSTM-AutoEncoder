@@ -25,6 +25,7 @@ from Tool import Normalization
 from Train import LSTM_Training_No_Label_Step1 as LSTM_Training_No_Label_Step1
 from Train import AutEncoder_Train
 from Train import classification
+from Train import classification_Random_Sequential
 
 
 parser = argparse.ArgumentParser()
@@ -175,7 +176,10 @@ cloth_lstm_loader_c=DataLoader(dataset=cloth_dataset_c,
                                    batch_size=opt.batch_size_for_prediction,
                                    sampler=train_lstm_sampler,
                                    num_workers=1)
-
+cloth_nonsequential_loader=DataLoader(dataset=cloth_dataset_c,
+                                   batch_size=opt.batch_size_for_prediction,
+                                   sampler=train_sampler,
+                                   num_workers=1)
                          
 
 
@@ -183,7 +187,7 @@ cloth_lstm_loader_c=DataLoader(dataset=cloth_dataset_c,
 
 if __name__ == '__main__':
     print("Project Started!")
-    epoch=22
+    epoch=10
     """
     epochs=10
     """
@@ -200,8 +204,11 @@ if __name__ == '__main__':
     """
     model=torch.load(step1_path)
     frozon_and_free_Get.frozon_Param(model)
+    """
     Classifier=classification.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,device,opt.AutoEncoder_Type,Classifier)
+    """
     """
     Window_Sliding_Test.train(model_one,[cloth_lstm_train_loader],net,device,opt.AutoEncoder_Type)
     """
+    Classifier_Randomc=classification_Random_Sequential.train(net,cloth_nonsequential_loader,epoch,opt.lr,device,opt.AutoEncoder_Type,Classifier)
 ##################################################

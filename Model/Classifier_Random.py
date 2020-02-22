@@ -17,7 +17,7 @@ class Classifier (nn.Module):
 
     def forward(self,x):
         x=x.view(-1,x.view(-1))
-        x_1=self.leakyrelu(self.fc1(x))
+        x_1=self.relu(self.fc1(x))
         x_2=self.fc2(x_1)    
         return x_2
     
