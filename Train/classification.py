@@ -75,6 +75,7 @@ def train(model,epochs,data_loader,net,lr,device,AutoEncoder_Type,Classifier):
         train_acc=0
         train_loss=[]
         random.shuffle(inputs_randperm_train)
+        item_time=int(len(inputs_randperm_train)/10)
         for z in range(len(inputs_randperm_train)):
             sample=inputs_randperm_train[z]
             inputs=sample['picture']
@@ -83,34 +84,27 @@ def train(model,epochs,data_loader,net,lr,device,AutoEncoder_Type,Classifier):
             inputs=Variable(inputs)
             inputs_noise=inputs_noise.to(device)
             inputs_noise=Variable(inputs_noise)
-            label=sample["label"]
-            item_time=int(len(inputs_randperm_train)/10)
-            batch_acc=0
-            number=len(inputs)-3*sequ_length
-            for i in range(len(inputs)-3*sequ_length):
-                optimizer_Classifier.zero_grad()
-                input_pred=inputs_noise[i:i+3*sequ_length]
-                target_label=label[i+3*sequ_length]
-                target_label=target_label.to(device)
-                inputs_encor=net.encoder(input_pred)
-                inputs_lstm=model(inputs_encor,device)
-                pred_label=Classifier(inputs_lstm)
-                _,target_index=torch.max(target_label,1)
-                _,pred_index=torch.max(pred_label,1)
-                loss_fn=Classifier.loss_fn(pred_label,target_index)
-                loss_fn.backward()
-                train_loss.append(loss_fn.item())
-                optimizer_Classifier.step()
-                if pred_index==target_index:
-                    batch_acc+=1
-                    train_acc+=1
-                if ((i+1)%(len(inputs)-3*sequ_length)==1)and((z+1)%(item_time)==1):
-                    acc_rate=100*(batch_acc/number)
-                    print("[Epochs:%d/%d][Train Time:%d/%d][Duration:%f][Loss:%f][Accuaracy:%f]"
-                        %(n+1,epochs,z+1,len(inputs_randperm_train),time.time()-train_start_time,mean_stat(train_loss),acc_rate),"Predicted Label is:",pred_label)
-                    train_start_time=time.time()
+            inputs_label=sample["label"]
+            optimizer_Classifier.zero_grad()
+            label=inputs_label[0]
+            inputs_sec=inputs_noise[0:3]
+            inputs_encor=net.encoder(inputs_sec)
+            inputs_lstm=model(inputs_encor,device)
+            pred_label=Classifier(inputs_lstm)
+            _,target_index=torch.max(label,1)
+            _,pred_index=torch.max(pred_label,1)
+            loss_fn=Classifier.loss_fn(pred_label,target_index)
+            loss_fn.backward()
+            train_loss.append(loss_fn.item())
+            optimizer_Classifier.step()
+            if pred_index==target_index:
+                train_acc+=1
+            if (z+1)%(item_time)==1:
+                print("[Epochs:%d/%d][Train Time:%d/%d][Duration:%f][Loss:%f]"
+                    %(n+1,epochs,z+1,len(inputs_randperm_train),time.time()-train_start_time,mean_stat(train_loss)),"Predicted Label is:",pred_label)
+                train_start_time=time.time()
         loss_mean=mean_stat(train_loss)
-        total_number=len(inputs_randperm_train)*(len(inputs)-3*sequ_length)
+        total_number=len(inputs_randperm_train)
         total_acc=100*(train_acc/total_number)
         train_epoch.append(loss_mean)
         acc_train.append(total_acc)
@@ -118,6 +112,7 @@ def train(model,epochs,data_loader,net,lr,device,AutoEncoder_Type,Classifier):
         test_loss=[]
         test_acc=0
         random.shuffle(inputs_randperm_val)
+        item_time=int(len(inputs_randperm_val)/10)
         for z in range (len(inputs_randperm_val)):
             sample=inputs_randperm_val[z]
             inputs=sample['picture']
@@ -126,31 +121,24 @@ def train(model,epochs,data_loader,net,lr,device,AutoEncoder_Type,Classifier):
             inputs=Variable(inputs)
             inputs_noise=inputs_noise.to(device)
             inputs_noise=Variable(inputs_noise)
-            label=sample["label"]
-            item_time=int(len(inputs_randperm_test)/10)
-            batch_acc=0
-            number=len(inputs)-3*sequ_length
-            for i in range(len(inputs)-3*sequ_length):
-                input_pred=inputs_noise[i:i+3*sequ_length]
-                target_label=label[i+3*sequ_length]
-                target_label=target_label.to(device)
-                inputs_encor=net.encoder(input_pred)
-                inputs_lstm=model(inputs_encor,device)
-                pred_label=Classifier(inputs_lstm)
-                _,target_index=torch.max(target_label,1)
-                _,pred_index=torch.max(pred_label,1)
-                loss_fn=Classifier.loss_fn(pred_label,target_index)
-                if pred_index==target_index:
-                    batch_acc+=1
-                    test_acc+=1
-                test_loss.append(loss_fn.item())
-                if((i+1)%(len(inputs)-4*sequ_length)==1) and ((z+1)%(item_time+1)==1):
-                    acc_rate=(batch_acc/number)*100
-                    print("[Epochs:%d/%d][Test Time:%d/%d][Duration:%f][Loss: %f][Accuracy: %f]"
-                        %(n+1,epochs,z+1,len(inputs_randperm_val),time.time()-train_start_time,mean_stat(test_loss),acc_rate),"Predicted label is:",pred_label)
-                    train_start_time=time.time()
+            inputs_label=sample["label"]
+            label=inputs_label[0]
+            inputs_sec=inputs_noise[0:3]
+            inputs_encor=net.encoder(inputs_sec)
+            inputs_lstm=model(inputs_encor,device)
+            pred_label=Classifier(inputs_lstm)
+            _,target_index=torch.max(label,1)
+            _,pred_index=torch.max(pred_label,1)
+            loss_fn=Classifier.loss_fn(pred_label,target_index)
+            if pred_index==target_index:
+                test_acc+=1
+            test_loss.append(loss_fn.item())
+            if((z+1)%(item_time+1)==1):
+                print("[Epochs:%d/%d][Test Time:%d/%d][Duration:%f][Loss: %f]"
+                    %(n+1,epochs,z+1,len(inputs_randperm_val),time.time()-train_start_time,mean_stat(test_loss)),"Predicted label is:",pred_label)
+                train_start_time=time.time()
         loss_mean=mean_stat(test_loss)
-        total_number=len(inputs_randperm_val)*(len(inputs)-3*sequ_length)
+        total_number=len(inputs_randperm_val)
         total_acc=100*(test_acc/total_number)
         test_epoch.append(loss_mean)
         acc_test.append(total_acc)

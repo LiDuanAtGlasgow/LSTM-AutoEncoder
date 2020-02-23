@@ -187,7 +187,7 @@ cloth_nonsequential_loader=DataLoader(dataset=cloth_dataset_c,
 
 if __name__ == '__main__':
     print("Project Started!")
-    epoch=10
+    epoch=22
     """
     epochs=10
     """
@@ -204,9 +204,9 @@ if __name__ == '__main__':
     """
     model=torch.load(step1_path)
     frozon_and_free_Get.frozon_Param(model)
-    """
+    '''
     Classifier=classification.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,device,opt.AutoEncoder_Type,Classifier)
-    """
+    '''
     """
     Window_Sliding_Test.train(model_one,[cloth_lstm_train_loader],net,device,opt.AutoEncoder_Type)
     """
