@@ -11,7 +11,7 @@ import torchvision.datasets as datasets
 from torchvision.utils import save_image
 from torch.utils.data import Dataset as Dataset
 from Model import LSTM as LSTM
-from Model import AutoEncoder as AutoEncoder
+from Model import AutoEncoder_3layers
 from Train import LSTM_Training_Step1
 from Tool import Frozon_and_Free_Param as frozon_and_free_Get
 from torch.utils.data.sampler import SubsetRandomSampler
@@ -147,7 +147,7 @@ test_lstm_sampler=SequentialSampler(test_indices)
 
 model=LSTM.LSTM(input_feature=1024,n_layer=1,hidden_dim=1024)
 model=model.to(device)
-net_RGB=AutoEncoder.AutoEncoder(device)
+net_RGB=AutoEncoder_3layers.AutoEncoder(device)
 net_depth=AutoEncoder_Depth.AutoEncoder(device)
 Classifier=Classifier.Classifier(device,output_feature=opt.n_class,hidden_feature=128)
 Classifier=Classifier.to(device)
@@ -204,11 +204,12 @@ if __name__ == '__main__':
     """
     model=torch.load(step1_path)
     frozon_and_free_Get.frozon_Param(model)
-    '''
     Classifier=classification.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,device,opt.AutoEncoder_Type,Classifier)
-    '''
     """
     Window_Sliding_Test.train(model_one,[cloth_lstm_train_loader],net,device,opt.AutoEncoder_Type)
     """
+    """
     Classifier_Randomc=classifiction_Random_NonSequential.train(net,cloth_nonsequential_loader,epoch,opt.lr,device,opt.AutoEncoder_Type,Classifier)
+    """
+    
 ##################################################
