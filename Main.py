@@ -211,5 +211,4 @@ if __name__ == '__main__':
     """
     Classifier_Randomc=classifiction_Random_NonSequential.train(net,cloth_nonsequential_loader,epoch,opt.lr,device,opt.AutoEncoder_Type,Classifier)
     """
-    
 ##################################################
