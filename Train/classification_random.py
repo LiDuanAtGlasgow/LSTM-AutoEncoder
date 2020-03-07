@@ -112,8 +112,8 @@ def train(net,data_loader,epochs,lr,device,AutoEncoder_Type,Classifier):
                 optimiser_label.step()
                 train_loss.append(loss_fn.item())
                 if (z+1)%batch_train==1 and (i+1)%(len(inputs))==1:
-                    print ("[Train Part][Epoch:%d/%d][Loss:%f][Duration:%f]"
-                    %(n_epoch+1,epochs,mean_stat(train_loss),time.time()-start_time),"pred_label is:",pred_label)
+                    print ("[Train Part][Epoch:%d/%d][Batch Size:%d/%d][Loss:%f][Duration:%f]"
+                    %(n_epoch+1,epochs,z+1,len(inputs_randperm_train),mean_stat(train_loss),time.time()-start_time),"pred_label is:",pred_label)
                     start_time=time.time()
                 _,pred_index=torch.max(pred_label,1)
                 if label_index==pred_index:
@@ -145,8 +145,8 @@ def train(net,data_loader,epochs,lr,device,AutoEncoder_Type,Classifier):
                 loss_fn=Classifier.loss_fn(pred_label,label_index)
                 val_loss.append(loss_fn.item())
                 if (z+1)%batch_val==1 and (i+1)%(len(inputs))==1:
-                    print ("[Test Part][Epoch:%d/%d][Loss is:%f][Duration:%f]"
-                    %(n_epoch+1,epochs,mean_stat(val_loss),time.time()-start_time),"pred_lable is:",pred_label)
+                    print ("[Test Part][Epoch:%d/%d][Batch Size:%d/%d][Loss is:%f][Duration:%f]"
+                    %(n_epoch+1,epochs,z+1,len(inputs_randperm_val),mean_stat(val_loss),time.time()-start_time),"pred_lable is:",pred_label)
                     start_time=time.time()
                     save_image(image.cpu(),os.path.join(save_pic,"%f.png"%time.time()))
                 _,pred_index=torch.max(pred_label,1)

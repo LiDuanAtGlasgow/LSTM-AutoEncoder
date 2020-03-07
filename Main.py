@@ -224,5 +224,7 @@ if __name__ == '__main__':
     """
     classifier=classification.train(model,epoch,cloth_classification_loader,net,opt.lr,device,opt.AutoEncoder_Type,Classifier)
     """
+    """
     classifier_random=classification_random.train(net,cloth_nonsequential_loader,epoch,opt.lr,device,opt.AutoEncoder_Type,Classifier)
+    """
 ##################################################
