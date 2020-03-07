@@ -1,9 +1,10 @@
 import os
 import csv
 
-f=open('C:/Users/Li_Duan/Desktop/AE_P1_Second/Tool/label_RGB_hard.csv','r+')
+exlxs="./pant3_rgb.csv"
+f=open(exlxs,'r+')
 w=csv.writer(f)
-for path,dirs,files in os.walk("C:/Users/Li_Duan/Desktop/AE_P1_Second/Database/Train_Database/ClothingResources/hard"):
+for path,dirs,files in os.walk("./mask_clothes/pant3_rgb/"):
     for filename in (files):
         print(filename)
         w.writerow([filename])

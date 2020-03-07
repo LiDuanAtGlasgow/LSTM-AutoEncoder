@@ -1,7 +1,6 @@
 /Database
 .vscode
-/data/Recon_Image
-/data/Window_Sliding
-/data/classification/randomc_image
+/data/
+/save_model/
 /data/lstm_result/
 __pycache__
