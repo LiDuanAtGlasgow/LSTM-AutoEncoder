@@ -36,9 +36,8 @@ def train(net,data_loader,epochs,lr,device,AutoEncoder_Type,Classifier):
     if not os.path.exists(save_model):
         os.mkdir(save_model)
     path_randomc='./data/classification/randomc_model/%f.pth'%time.time()
-    selfnoise=SelfNoise.Gaussian_Nosie()
     optimiser_label=optim.Adam(Classifier.parameters(),lr=lr)
-    net=net[0].to(device)
+    net=net.to(device)
     scheduler=optim.lr_scheduler.StepLR(optimiser_label,step_size=4,gamma=0.1,last_epoch=-1)
 
     """

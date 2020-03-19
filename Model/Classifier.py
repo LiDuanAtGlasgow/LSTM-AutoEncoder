@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 class Classifier (nn.Module):
-    def __init__(self,device,output_feature,hidden_feature):
+    def __init__(self,output_feature,hidden_feature=128):
         super(Classifier,self).__init__()
-        self.device=device
         self.output_feature=output_feature
         self.hidden_feature=hidden_feature
         self.fc1=nn.Linear(64*1024,self.hidden_feature )

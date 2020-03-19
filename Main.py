@@ -11,27 +11,26 @@ import torchvision.datasets as datasets
 from torchvision.utils import save_image
 from torch.utils.data import Dataset as Dataset
 from Model import LSTM as LSTM
-from Model import AutoEncoder_3layers
+from Model import AutoEncoder
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data.sampler import SequentialSampler as SequentialSampler
-from Model import AutoEncoder_Depth as AutoEncoder_Depth
+from Model import AutoEncoder_depth
 from Model import Classifier
 from Tool import Picture_Dataset as Picture_Dataset
 from Tool import Normalization
 from Train import autoencoder_train
 from Train import classification
 from Train import classification_random
-from Train import loo
+from Train import loo_train
 from Train import lstm_train
 from Tool import freeze
+from Train import lstm_loo_train
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", type=int, default=20, help="size of the batches")
 parser.add_argument("--batch_size_for_prediction",type=int,default=20,help='bacth size for the first test')
 parser.add_argument("--lr", type=float, default=0.0001, help="adam: learning rate")
-parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
-parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--AutoEncoder_Type",type=int,default=1,help='AutoEncoder_Type Selection')
 parser.add_argument("--n_class",type=int,default=3,help='number of classes')
 parser.add_argument("--index_column",type=int,default=2,help='index of the class column')
@@ -42,6 +41,7 @@ parser.add_argument("--real_image",type=int,default=1,help='check if it is the r
 parser.add_argument("--dataset_type",type=int,default=1,help='the train indice of the dataset')
 parser.add_argument("--batch_size_for_classification",type=int,default=4,help='bacth size for classification')
 parser.add_argument("--test",type=int,default=1,help='test images from LeaveOneOut strategy')
+parser.add_argument("--batch_size_for_loo_test",type=int,default=20,help='Batch Size for LeaveOneOut Test')
 
 opt=parser.parse_args()
 ####################Loading Process#############
@@ -74,21 +74,34 @@ if opt.AutoEncoder_Type==2:
 if opt.real_image==2:
     if opt.AutoEncoder_Type==1:
         if opt.train_method==1:
-            cloth_dataset=datasets.ImageFolder(root='./Database/Train_Database/ClothingResources/real_depth_part_white/',transform=transforms)
-            cloth_dataset_c=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_depth_part_white/real_depth_part_white/',csv_path='./Tool/Real_depth_Part.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+            cloth_dataset=datasets.ImageFolder(root='./Database/Train_Database/ClothingResources/real_depth_part/',transform=transforms)
+            cloth_dataset_c=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_depth_part/real_depth_part/',csv_path='./Tool/Real_depth_Part.csv',idx_column=opt.index_column,transforms=transforms,device=device)
         elif opt.train_method==2:
-            cloth_dataset=datasets.ImageFolder(root='./Database/Train_Database/ClothingResources/real_depth_all_white/',transform=transforms)
-            cloth_dataset_c=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_depth_all_white/real_depth_all_white/',csv_path='./Tool/Real_depth_All.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+            cloth_dataset=datasets.ImageFolder(root='./Database/Train_Database/ClothingResources/real_depth_all/',transform=transforms)
+            cloth_dataset_c=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_depth_all/real_depth_all/',csv_path='./Tool/Real_depth_All.csv',idx_column=opt.index_column,transforms=transforms,device=device)
     if opt.AutoEncoder_Type==2:
         if opt.train_method==1:
             cloth_dataset=datasets.ImageFolder(root='./Database/Train_Database/ClothingResources/real_rgb_part/',transform=transforms)
             cloth_dataset_c=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_rgb_part/real_rgb_part/',csv_path='./Tool/Real_rgb_Part.csv',idx_column=opt.index_column,transforms=transforms,device=device)
         elif opt.train_method==2:
             cloth_dataset=datasets.ImageFolder(root='./Database/Train_Database/ClothingResources/real_rgb_all/',transform=transforms)
-            cloth_dataset_c=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_rgb_all/real_rgb_all/',csv_path='./Tool/Real_rgb_All.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+            cloth_dataset_c=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_rgb_all_white/real_rgb_all /',csv_path='./Tool/Real_rgb_All.csv',idx_column=opt.index_column,transforms=transforms,device=device)
 
 if opt.test==2:
-    test_real_rgb=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_depth_all_white/real_depth_all_white/',csv_path='./Tool/Test_REAL_RGB.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+    if opt.train_method==1:
+        if opt.AutoEncoder_Type==1:
+            train_real=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_depth_all/real_depth_all/',csv_path='./Tool/Train_Real_Part.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+            test_real=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_depth_all/real_depth_all/',csv_path='./Tool/Test_Real_Part.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+        if opt.AutoEncoder_Type==2:
+            train_real=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_rgb_all/real_rgb_all/',csv_path='./Tool/Train_Real_Part.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+            test_real=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_rgb_all/real_rgb_all/',csv_path='./Tool/Test_Real_Part.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+    if opt.train_method==2:
+        if opt.AutoEncoder_Type==1:
+            train_real=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_depth_all/real_depth_all/',csv_path='./Tool/Train_Real_All.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+            test_real=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_depth_all/real_depth_all/',csv_path='./Tool/Test_Real_All.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+        if opt.AutoEncoder_Type==2:
+            train_real=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_rgb_all/real_rgb_all/',csv_path='./Tool/Train_Real_All.csv',idx_column=opt.index_column,transforms=transforms,device=device)
+            test_real=Picture_Dataset.PictureDataset(file_path='./Database/Train_Database/ClothingResources/real_rgb_all/real_rgb_all/',csv_path='./Tool/Test_Real_All.csv',idx_column=opt.index_column,transforms=transforms,device=device)
 
 
 path_folder='./save_model/'
@@ -119,108 +132,100 @@ if opt.real_image==2:
 save_classification='./data/classification/'
 if not os.path.exists(save_classification):
     os.makedirs(save_classification)
-
-
-seed=42
-np.random.seed(seed)
-torch.manual_seed(seed)
 data_size=len(cloth_dataset_c)
+n_train=int(data_size*0.8)
 n_test=int(data_size*0.1)
-n_train=data_size-n_test
-random_seed=42
 if opt.test==2:
-    test_rgb_size=len(test_real_rgb)
-    test_rgb_indices=list(range(test_rgb_size))
+    test_size=len(test_real)
+    test_real_indices=list(range(test_size))
+    train_size=len(train_real)
+    train_real_indices=list(range(train_size))
 indices=list(range(data_size))
-shuffle_dataset=True
-if shuffle_dataset:
-    np.random.seed(seed)
-    np.random.shuffle(indices)
-if opt.dataset_type==1:
-    train_indices=indices
-if opt.dataset_type==2:
-    train_indices=indices[0:n_train]
-test_indices=indices[n_train:n_train+n_test]
+lstm_indices=indices
+train_indices=indices[0:n_train]
+val_indices=indices[n_train:n_train+n_test]
+test_indices=indices[n_train+n_test:]
 
 train_sampler=SubsetRandomSampler(train_indices)
-test_sampler=SubsetRandomSampler(test_indices)
+val_sampler=SubsetRandomSampler(val_indices)
+test_sampler=SubsetRandomSampler(test_real_indices)
+lstm_sampler=SequentialSampler(lstm_indices)
 
-
-train_lstm_sampler=SequentialSampler(train_indices)
-test_lstm_sampler=SequentialSampler(test_indices)
 if opt.test==2:
-    test_rgb_sampler=SequentialSampler(test_rgb_indices)
+    test_real_sampler=SequentialSampler(test_real_indices)
+    train_real_sampler=SequentialSampler(train_real_indices)
 
-model=LSTM.LSTM(input_feature=1024,n_layer=1,hidden_dim=1024)
+model=LSTM.LSTM()
 model=model.to(device)
-net_RGB=AutoEncoder_3layers.AutoEncoder(device)
-net_depth=AutoEncoder_Depth.AutoEncoder(device)
-Classifier=Classifier.Classifier(device,output_feature=opt.n_class,hidden_feature=128)
+net_RGB=AutoEncoder.AutoEncoder()
+net_depth=AutoEncoder_depth.AutoEncoder()
+Classifier=Classifier.Classifier(output_feature=opt.n_class)
 Classifier=Classifier.to(device)
 
 if opt.extractor==1:
-    net_opt=[net_depth]
+    net_opt=net_depth
 elif opt.extractor==2:
-    net_opt=[net_RGB]
+    net_opt=net_RGB
 
 
 
-cloth_loader=DataLoader(dataset=cloth_dataset,
+train_loader=DataLoader(dataset=cloth_dataset,
                          batch_size=opt.batch_size,
                          sampler=train_sampler,
                          num_workers=1)
-cloth_test_loader=DataLoader(dataset=cloth_dataset,
+val_loader=DataLoader(dataset=cloth_dataset,
+                         batch_size=opt.batch_size,
+                         sampler=val_sampler,
+                         num_workers=1)
+test_loader=DataLoader(dataset=cloth_dataset,
                          batch_size=opt.batch_size,
                          sampler=test_sampler,
                          num_workers=1)
 
-cloth_lstm_train_loader=DataLoader(dataset=cloth_dataset,
-                                   batch_size=opt.batch_size_for_prediction,
-                                   sampler=train_lstm_sampler,
-                                   num_workers=1)
-cloth_lstm_loader_c=DataLoader(dataset=cloth_dataset_c,
-                                   batch_size=opt.batch_size_for_prediction,
-                                   sampler=train_lstm_sampler,
-                                   num_workers=1)
+lstm_loader=DataLoader(dataset=cloth_dataset_c,
+                        batch_size=opt.batch_size_for_prediction,
+                        sampler=lstm_sampler,
+                        num_workers=1)
 cloth_classification_loader=DataLoader(dataset=cloth_dataset_c,
                                    batch_size=opt.batch_size_for_classification,
-                                   sampler=train_lstm_sampler,
+                                   sampler=lstm_sampler,
                                    num_workers=1)
 cloth_nonsequential_loader=DataLoader(dataset=cloth_dataset_c,
                                    batch_size=opt.batch_size_for_classification,
-                                   sampler=train_sampler,
+                                   sampler=lstm_sampler,
                                    num_workers=1)
 if opt.test==2:
-    test_real_rgb_loader=DataLoader(dataset=test_real_rgb,
-                                batch_size=opt.batch_size_for_classification,
-                                sampler=test_rgb_sampler,
+    test_real_loader=DataLoader(dataset=test_real,
+                                batch_size=opt.batch_size_for_loo_test,
+                                sampler=test_real_sampler,
+                                num_workers=1)
+    train_real_loader=DataLoader(dataset=train_real,
+                                batch_size=opt.batch_size_for_loo_test,
+                                sampler=train_real_sampler,
                                 num_workers=1)
 
 
-#############AutoEncoder Training##############
-
+############Training################
 if __name__ == '__main__':
     print("Project Started!")
-    epoch=10
-    """
+    epoch=22
     epochs=13
     """
-    """
-    net=autoencoder_train.train(net_opt,cloth_loader,cloth_test_loader,opt.batch_size,epochs,opt.lr,device,opt.AutoEncoder_Type)
+    net=autoencoder_train.train(net_opt,train_loader,val_loader,test_loader,opt.batch_size,epochs,opt.lr,device,opt.AutoEncoder_Type)
     torch.save(net,path)
     """
-#############LSTM Training#######################
     net=torch.load(path)
-    for n in range(len(net)):
-        freeze.frozon(net[n])
+    freeze.frozon(net)
     """
-    model=lstm_train.train(model,epoch,cloth_lstm_loader_c,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
+    model=lstm_train.train(model,epoch,lstm_loader,net,opt.lr,opt.batch_size,device,opt.AutoEncoder_Type)
     """
     model=torch.load(step1_path)
     freeze.frozon(model)
-    """
-    loo_classifier=loo.train(model,epoch,cloth_classification_loader,test_real_rgb_loader,net,opt.lr,device,opt.AutoEncoder_Type,Classifier)
-    """
+    if opt.test==2:
+        """
+        loo_model=lstm_loo_train.train(model,epoch,train_real_rgb_loader,test_real_rgb_loader,net,opt.lr,opt.batch_size_for_loo_test,device,opt.AutoEncoder_Type)
+        """
+        loo_classifier=loo_train.train(model,epoch,train_real_loader,test_real_loader,net,opt.lr,device,opt.AutoEncoder_Type,Classifier)
     """
     classifier=classification.train(model,epoch,cloth_classification_loader,net,opt.lr,device,opt.AutoEncoder_Type,Classifier)
     """

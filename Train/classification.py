@@ -19,8 +19,8 @@ def train(model,epochs,data_loader,net,lr,device,AutoEncoder_Type,Classifier):
     selfnoise=SelfNoise.Gaussian_Nosie()
     train_start_time=time.time()
     epoch=[]
-    net=net[0]
-    optimizer_Classifier=optim.Adam(Classifier.parameters(),lr=lr)
+    net=net
+    optimizer_Classifier=optim.Adam(Classifier.parameters(),lr=lr,)
     save_figure='./data/classification/result'
     if not os.path.exists(save_figure):
         os.mkdir(save_figure)

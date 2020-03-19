@@ -3,9 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class AutoEncoder(nn.Module):
-    def __init__(self, device):
+    def __init__(self):
         super(AutoEncoder, self).__init__()
-        self._device = device
 
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1)  # b, 32, 128, 128
         self.conv2 = nn.Conv2d(32, 32, kernel_size=3, stride=2, padding=1)  # b, 32, 64, 64

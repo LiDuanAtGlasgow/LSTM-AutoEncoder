@@ -12,7 +12,7 @@ import torch.nn.functional as F
 #======LTSM Model=========#
 class LSTM(nn.Module):
 
-    def __init__(self,input_feature,n_layer,hidden_dim):
+    def __init__(self,input_feature=1024,n_layer=1,hidden_dim=1024):
         super(LSTM, self).__init__()
         self.input_dim = input_feature
         self.hidden_dim = hidden_dim
