@@ -1,3 +1,4 @@
+# pylint: skip-file
 import torch
 import os
 import torch.nn as nn
@@ -36,9 +37,9 @@ def train(net,train_loader,val_loader,test_loader,batch_size,epochs,learning_rat
         net=net.to(device)
         for i,input_ in enumerate(train_loader):
             if AutoEncoder_Type==1:
-                inputs=input_[0][:,0:1,:,:]
+                inputs=input_['Image'][:,0:1,:,:]
             if AutoEncoder_Type==2:
-                inputs=input_[0]
+                inputs=input_['Image']
             inputs=inputs.to(device)
             inputs=Variable(inputs)
             optimiser.zero_grad()
@@ -51,6 +52,9 @@ def train(net,train_loader,val_loader,test_loader,batch_size,epochs,learning_rat
                 print("[Train][Epochs: %d/%d][Batch: %d/%d][Train Loss: %f][Duration: %f]"
                 %(n_epochs+1,epochs,i,len(train_loader),tra_los_round/(every_time),time.time()-train_start_time))
                 train_start_time=time.time()
+                n=min(len(inputs),8)
+                comparison=torch.cat([inputs[:n],recon_batch[:n]])
+                save_image(comparison.cpu(),os.path.join(save_dir,'%d.png'%(time.time())))
         avg_loss=tra_los_round/(len(train_loader)*batch_size)
         tra_los_eps.append(avg_loss)
         print (tra_los_eps[n_epochs])
@@ -61,9 +65,9 @@ def train(net,train_loader,val_loader,test_loader,batch_size,epochs,learning_rat
         start_time=time.time()
         for i, input_ in enumerate(val_loader):
             if AutoEncoder_Type==1:
-                inputs=input_[0][:,0:1,:,:]
+                inputs=input_['Image'][:,0:1,:,:]
             if AutoEncoder_Type==2:
-                inputs=input_[0]
+                inputs=input_['Image']
             inputs=Variable(inputs)
             inputs=inputs.to(device)
             recon_batch=net(inputs)
@@ -73,10 +77,13 @@ def train(net,train_loader,val_loader,test_loader,batch_size,epochs,learning_rat
                 print("[Val][Epoch:%d/%d][Batch:%d/%d][Val Loss:%f][Duration: %f]"
                 %(n_epochs+1,epochs,i,len(val_loader),val_los_round/len(val_loader),time.time()-start_time))
                 start_time=time.time()
+                n=min(len(inputs),8)
+                comparison=torch.cat([inputs[:n],recon_batch[:n]])
+                save_image(comparison.cpu(),os.path.join(save_dir,'%d.png'%(time.time())))
         avg_loss=val_los_round/(len(val_loader)*batch_size)
         val_los_eps.append(avg_loss)
         scheduler.step()
-        all_eps.append(n_epochs)
+        all_eps.append(n_epochs+1)
     
     test_batch_size=len(test_loader)
     every_time=int(test_batch_size/10)
@@ -84,9 +91,9 @@ def train(net,train_loader,val_loader,test_loader,batch_size,epochs,learning_rat
     test_start_time=time.time()
     for i, input_ in enumerate(test_loader):
         if AutoEncoder_Type==1:
-            inputs=input_[0][:,0:1,:,:]
+            inputs=input_['Image'][:,0:1,:,:]
         if AutoEncoder_Type==2:
-            inputs=input_[0]
+            inputs=input_['Image']
         inputs=Variable(inputs)
         inputs=inputs.to(device)
         recon_batch=net(inputs)
@@ -95,7 +102,7 @@ def train(net,train_loader,val_loader,test_loader,batch_size,epochs,learning_rat
         if (i+1)%(every_time+1)==0:
             print("[Test][Batch:%d/%d][Test Loss:%f][Duration: %f]"
             %(i,len(test_loader),test_los_round/len(test_loader),time.time()-test_start_time))
-            n=min(inputs.size(0),8)
+            n=min(len(inputs),8)
             comparison=torch.cat([inputs[:n],recon_batch[:n]])
             save_image(comparison.cpu(),os.path.join(save_dir,'%d.png'%(time.time())))
             test_start_time=time.time()

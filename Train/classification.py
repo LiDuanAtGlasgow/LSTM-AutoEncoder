@@ -1,3 +1,4 @@
+# pylint: skip-file
 import torch
 import random
 from statistics import mean as mean_stat
@@ -8,91 +9,51 @@ from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 import time
 import pandas as pd
-from Tool import SelfNoise
 from torch.autograd import Variable
 from sklearn.preprocessing import LabelBinarizer
 from Tool import freeze
 import seaborn as sns
 import numpy as np
+from Tool import custom_binary_encoding as binary_encoding
 
-def train(model,epochs,data_loader,net,lr,device,AutoEncoder_Type,Classifier):
-    selfnoise=SelfNoise.Gaussian_Nosie()
+def train(model,epochs,train_loader,val_loader,test_loader,net,lr,device,AutoEncoder_Type,Classifier):
     train_start_time=time.time()
     epoch=[]
     net=net
     optimizer_Classifier=optim.Adam(Classifier.parameters(),lr=lr,)
     save_figure='./data/classification/result'
     if not os.path.exists(save_figure):
-        os.mkdir(save_figure)
-    save_classifier='./data/classification/classifier'
-    if not os.path.exists(save_classifier):
-        os.mkdir(save_classifier)
+        os.makedirs(save_figure)
     scheduler=optim.lr_scheduler.StepLR(optimizer_Classifier,step_size=4,gamma=0.1,last_epoch=-1)
-
-
-    path_classifier='./data/classification/classifier/%f.pth'%(time.time())
-    
-    """
-    Data Preperation Period
-    """
-    inputs_random=[]
-    start_time=time.time()
-    
-    for t,input_ in enumerate(data_loader):
-        if AutoEncoder_Type==1:
-            image=input_['Image'][:,0:1,:,:]
-        if AutoEncoder_Type==2:
-            image=input_['Image']
-        label=input_['Label']
-        item_time=int(len(data_loader)/10)
-        if (t+1)%(item_time+1)==1:
-            print("Batch_Size[%d/%d]Duration[%f]"
-                %(t+1,len(data_loader),time.time()-start_time))
-            start_time=time.time()
-        samples={"picture":image,"label":label}
-        inputs_random.append(samples)
-    encoder=LabelBinarizer()
-    exchange_matrix=[] 
-    for i in range(len(inputs_random)):
-        for t in range(len(inputs_random[i]['label'])):
-            exchange_matrix.append(inputs_random[i]['label'][t])
-    exchange_matrix_enc=encoder.fit_transform(exchange_matrix)
-    for i in range(len(inputs_random)):
-        for t in range(len(inputs_random[i]['label'])):
-            inputs_random[i]['label'][t]=exchange_matrix_enc[i*len(inputs_random[i]['label'])+t]
-            inputs_random[i]['label'][t]=torch.tensor([inputs_random[i]['label'][t]],device=device).long()
-    print("the encoding and from numpy tensor is finished!")
-
-    start_time=time.time()
-    random.shuffle(inputs_random)
-    inputs_randperm_train=inputs_random[0:int(len(inputs_random)*0.80)]
-    inputs_randperm_val=inputs_random[int(len(inputs_random)*0.80):int(len(inputs_random)*0.90)]
-    inputs_randperm_test=inputs_random[int(len(inputs_random)*0.90):int(len(inputs_random))]
+    save_picture='./data/classification/images'
+    if not os.path.exists(save_picture):
+        os.makedirs(save_picture)
 
     train_epoch=[]
     acc_train=[]
-    test_epoch=[]
-    acc_test=[]
+    val_epoch=[]
+    acc_val=[]
     
     for n in range(epochs):
         train_acc=0
         train_loss=[]
-        random.shuffle(inputs_randperm_train)
-        item_time=int(len(inputs_randperm_train)/10)
-        for z in range(len(inputs_randperm_train)):
-            sample=inputs_randperm_train[z]
-            inputs=sample['picture']
-            inputs_noise=selfnoise(inputs)
+        item_time=int(len(train_loader)/10)
+        for t,input_ in enumerate(train_loader):
+            if AutoEncoder_Type==1:
+                inputs=input_['Image'][:,0:1,:,:][0:3]
+            if AutoEncoder_Type==2:
+                inputs=input_['Image'][0:3]
             inputs=inputs.to(device)
             inputs=Variable(inputs)
-            inputs_noise=inputs_noise.to(device)
-            inputs_noise=Variable(inputs_noise)
-            inputs_label=sample["label"]
             optimizer_Classifier.zero_grad()
-            label=inputs_label[0]
-            inputs_sec=inputs[0:3]
-            inputs_encor=net.encoder(inputs_sec)
+            label=input_['Label'][0]
+            hot_key=binary_encoding.encoding(label)
+            label=hot_key.binary_encoding()
+            label=label.to(device)
+            inputs_encor=net.encoder(inputs)
             inputs_lstm=model(inputs_encor,device)
+            inputs_out=inputs_lstm.view(-1,64,32,32)
+            inputs_decor=net.decoder(inputs_out)
             pred_label=Classifier(inputs_lstm)
             _,target_index=torch.max(label,1)
             _,pred_index=torch.max(pred_label,1)
@@ -102,83 +63,95 @@ def train(model,epochs,data_loader,net,lr,device,AutoEncoder_Type,Classifier):
             optimizer_Classifier.step()
             if pred_index==target_index:
                 train_acc+=1
-            if (z+1)%(item_time)==1:
+            if (t+1)%(item_time+1)==0:
                 print("[Train][Epochs:%d/%d][Train Batch:%d/%d][Duration:%f][Loss:%f]"
-                    %(n+1,epochs,z+1,len(inputs_randperm_train),time.time()-train_start_time,mean_stat(train_loss)),"Predicted Label is:",pred_label)
+                    %(n+1,epochs,t+1,len(train_loader),time.time()-train_start_time,mean_stat(train_loss)),"Predicted Label is:",pred_label)
                 train_start_time=time.time()
+                cat=torch.cat([inputs,inputs_decor])
+                save_image(cat.cpu(),os.path.join(save_picture,'%f.png'%(time.time())))
         loss_mean=mean_stat(train_loss)
-        total_number=len(inputs_randperm_train)
+        total_number=len(train_loader)
         total_acc=100*(train_acc/total_number)
         train_epoch.append(loss_mean)
         acc_train.append(total_acc)
         print ("The Average Loss is (Train):",loss_mean)
         print ("The Total Accurarcy is (Train):",total_acc)
 
-        test_loss=[]
-        test_acc=0
-        random.shuffle(inputs_randperm_val)
-        item_time=int(len(inputs_randperm_val)/10)
-        for z in range (len(inputs_randperm_val)):
-            sample=inputs_randperm_val[z]
-            inputs=sample['picture']
-            inputs_noise=selfnoise(inputs)
+        val_start_time=time.time()
+        val_loss=[]
+        val_acc=0
+        item_time=int(len(val_loader)/10)
+        for t,input_ in enumerate(val_loader):
+            if AutoEncoder_Type==1:
+                inputs=input_['Image'][:,0:1,:,:][0:3]
+            if AutoEncoder_Type==2:
+                inputs=input_['Image'][0:3]
             inputs=inputs.to(device)
             inputs=Variable(inputs)
-            inputs_noise=inputs_noise.to(device)
-            inputs_noise=Variable(inputs_noise)
-            inputs_label=sample["label"]
-            label=inputs_label[0]
-            inputs_sec=inputs_noise[0:3]
-            inputs_encor=net.encoder(inputs_sec)
+            label=input_['Label'][0]
+            hot_key=binary_encoding.encoding(label)
+            label=hot_key.binary_encoding()
+            label=label.to(device)
+            inputs_encor=net.encoder(inputs)
             inputs_lstm=model(inputs_encor,device)
+            inputs_out=inputs_lstm.view(-1,64,32,32)
+            inputs_decor=net.decoder(inputs_out)
             pred_label=Classifier(inputs_lstm)
             _,target_index=torch.max(label,1)
             _,pred_index=torch.max(pred_label,1)
             loss_fn=Classifier.loss_fn(pred_label,target_index)
+            val_loss.append(loss_fn.item())
             if pred_index==target_index:
-                test_acc+=1
-            test_loss.append(loss_fn.item())
-            if((z+1)%(item_time+1)==1):
-                print("[Valid][Epochs:%d/%d][Valid Batch:%d/%d][Duration:%f][Loss: %f]"
-                    %(n+1,epochs,z+1,len(inputs_randperm_val),time.time()-train_start_time,mean_stat(test_loss)),"Predicted label is:",pred_label)
-                train_start_time=time.time()
-        loss_mean=mean_stat(test_loss)
-        total_number=len(inputs_randperm_val)
-        total_acc=100*(test_acc/total_number)
-        test_epoch.append(loss_mean)
-        acc_test.append(total_acc)
-        print ("The Average Loss is (Test):",loss_mean)
-        print ("The Total Accurarcy is (Test):",total_acc)
-        epoch.append(n)
+                val_acc+=1
+            if (t+1)%(item_time+1)==0:
+                print("[Val][Epochs:%d/%d][Val Batch:%d/%d][Duration:%f][Loss:%f]"
+                    %(n+1,epochs,t+1,len(test_loader),time.time()-val_start_time,mean_stat(val_loss)),"Predicted Label is:",pred_label)
+                val_start_time=time.time()
+                cat=torch.cat([inputs,inputs_decor])
+                save_image(cat.cpu(),os.path.join(save_picture,'%f.png'%(time.time())))
+        loss_mean=mean_stat(val_loss)
+        total_number=len(val_loader)
+        total_acc=100*(val_acc/total_number)
+        val_epoch.append(loss_mean)
+        acc_val.append(total_acc)
+        print ("The Average Loss is (Val):",loss_mean)
+        print ("The Total Accurarcy is (Val):",total_acc)
+        epoch.append(n+1)
         scheduler.step()
-
+    
     test=[]   
     freeze.frozon(net)
     freeze.frozon(model)
     freeze.frozon(Classifier)
-    random.shuffle(inputs_randperm_test)
-    item_time=int(len(inputs_randperm_test)/10)
-    start_time=time.time()
-    for z in range (len(inputs_randperm_test)):
-        sample=inputs_randperm_test[z]
-        inputs=sample['picture']
-        inputs_noise=selfnoise(inputs)
-        inputs_noise=inputs_noise[0:3]
-        inputs_noise=inputs_noise.to(device)
-        inputs_noise=Variable(inputs_noise)
-        inputs_encor=net.encoder(inputs_noise)
+    test_start_time=time.time()
+    item_time=int(len(test_loader)/10)
+    for t,input_ in enumerate(test_loader):
+        if AutoEncoder_Type==1:
+            inputs=input_['Image'][:,0:1,:,:][0:3]
+        if AutoEncoder_Type==2:
+            inputs=input_['Image'][0:3]
+        inputs=Variable(inputs)
+        inputs=inputs.to(device)
+        label=input_['Label'][0]
+        hot_key=binary_encoding.encoding(label)
+        label=hot_key.binary_encoding()
+        label=label.to(device)
+        inputs_encor=net.encoder(inputs)
         inputs_lstm=model(inputs_encor,device)
+        inputs_out=inputs_lstm.view(-1,64,32,32)
+        inputs_decor=net.decoder(inputs_out)
         pred_label=Classifier(inputs_lstm)
-        inputs_label=sample['label']
-        label=inputs_label[0]
         _,target_index=torch.max(label,1)
         _,pred_index=torch.max(pred_label,1)
+        loss_fn=Classifier.loss_fn(pred_label,target_index)
+        if (t+1)%(item_time+1)==0:
+            print("[Test][Test Batch:%d/%d][Duration:%f]"%(t+1,len(test_loader),time.time()-test_start_time),
+            "Target Index:",target_index.item(),"Prediction Index:",pred_index.item())
+            test_start_time=time.time()
+            cat=torch.cat([inputs,inputs_decor])
+            save_image(cat.cpu(),os.path.join(save_picture,'%f.png'%(time.time())))
         result={"target":target_index.item(),"prediction":pred_index.item()}
         test.append(result)
-        if (z+1)%item_time==1:
-            print("[Test][Test Batch:%d/%d][Duration:%f]"%(z+1,len(inputs_randperm_test),time.time()-start_time),
-            "Target Index:",target_index.item(),"Prediction Index:",pred_index.item())
-            start_time=time.time()
     zero_to_zero=0
     zero_to_one=0
     zero_to_two=0
@@ -303,33 +276,30 @@ def train(model,epochs,data_loader,net,lr,device,AutoEncoder_Type,Classifier):
     ax=sns.heatmap(total,annot=True,cmap="YlGnBu",vmin=0,vmax=100,fmt=".2f",xticklabels=False,yticklabels=False,cbar_kws={"label":"Classification Accuracy(%) Color Bar"})
     plt.title("Classification(%)")
     plt.savefig(os.path.join(save_figure,'%f.png'%(time.time())),dip=100)
-
     print (total)
-
     if AutoEncoder_Type==1:
         AutoEncoder_Type_Name='Depth Image'
     if AutoEncoder_Type==2:
         AutoEncoder_Type_Name='RGB Image'
-    df=pd.DataFrame({'x':epoch, 'train_loss':train_epoch, 'train_acc':acc_train,'test_loss':test_epoch,'test_acc':acc_test})
+    df=pd.DataFrame({'x':epoch, 'train_loss':train_epoch, 'train_acc':acc_train,'val_loss':val_epoch,'val_acc':acc_val})
     asplot=plt.figure()
     asplot.add_subplot(111)
     sbplt1=plt.subplot()
     sbplt1.plot('x', 'train_loss',data=df,color='red',label='train_loss')
-    sbplt1.plot('x', 'test_loss',data=df,color='blue',label='test_loss',linestyle='dashed')
+    sbplt1.plot('x', 'val_loss',data=df,color='blue',label='val_loss',linestyle='dashed')
     sbplt1.set_xlabel('Epoch')
     plt.legend(loc='upper left')
     sbplt2=sbplt1.twinx()
     sbplt2.plot('x', 'train_acc',data=df,color='green',label='train_acc')
-    sbplt2.plot('x', 'test_acc',data=df,color='yellow',label='test_acc',linestyle='dashed')
+    sbplt2.plot('x', 'val_acc',data=df,color='yellow',label='val_acc',linestyle='dashed')
     plt.legend(loc='upper right')
     plt.grid(True)
     plt.title("Cross-Entropy Loss and Accuracy of "+AutoEncoder_Type_Name)
     plt.savefig(os.path.join(save_figure,'%f.png'%(time.time())),dip=100)
     print ("Train Loss is:", train_epoch)
     print ("Train acc is:", acc_train)
-    print ("Test Loss is:",test_epoch)
-    print ("Test acc is:", acc_test)
-    torch.save(Classifier,path_classifier)
-    print ("Train Ends!")
+    print ("Test Loss is:",val_epoch)
+    print ("Test acc is:", acc_val)
+    print ("Congrats, Training Finished!")
     return Classifier
 
