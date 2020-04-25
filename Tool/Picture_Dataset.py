@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 import cv2
 import torchvision.transforms.functional as f
 from sklearn.preprocessing import LabelBinarizer
-
+# pylint: skip-file
 """
 Loading Data from Image Folder and Attach Them With Labels
 """

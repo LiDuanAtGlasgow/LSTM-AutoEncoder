@@ -1,3 +1,4 @@
+# pylint: skip-file
 
 import PIL.Image as Image
 import argparse

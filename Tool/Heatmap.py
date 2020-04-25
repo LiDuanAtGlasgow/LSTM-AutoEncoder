@@ -1,3 +1,4 @@
+# pylint: skip-file
 import numpy as np
 import seaborn as sns
 from openpyxl import load_workbook

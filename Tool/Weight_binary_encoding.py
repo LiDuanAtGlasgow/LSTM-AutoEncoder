@@ -1,3 +1,4 @@
+# pylint: skip-file
 import torch
 import numpy as np
 class encoding(object):
